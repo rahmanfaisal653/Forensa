@@ -78,7 +78,7 @@ async function generateWithGemini(
   const MODEL_NAME = 'gemini-3.6-flash';
   const prompt = buildPrompt(mode, journalName, manuscript);
 
-  // Pakai key default server (.env) via proxy /api/gemini.
+  // Pakai key default server (.env) via proxy /api/gemini (streaming SSE).
   const res = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -92,6 +92,48 @@ async function generateWithGemini(
     const text = await res.text().catch(() => '');
     throw new Error(`Gagal menghubungi Gemini (${res.status})${text ? ': ' + text : ''}`);
   }
-  const data = await res.json();
-  return data?.text || 'Tidak ada respons dari sistem.';
+  if (!res.body) {
+    throw new Error('Respons Gemini tidak valid (body kosong).');
+  }
+
+  // Parse SSE stream: lines `data: {...}` with { content: "<delta>" },
+  // terminated by `data: [DONE]`.
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let full = '';
+  const errorMsg = (s: string) => `Gagal membaca respons Gemini: ${s}`;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let idx;
+    while ((idx = buffer.indexOf('\n\n')) !== -1) {
+      const event = buffer.slice(0, idx);
+      buffer = buffer.slice(idx + 2);
+      for (const line of event.split('\n')) {
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.error) {
+            throw new Error(errorMsg(parsed.error));
+          }
+          const delta = parsed?.content;
+          if (typeof delta === 'string') full += delta;
+        } catch (e) {
+          if (e instanceof Error && e.message.startsWith(errorMsg(''))) throw e;
+          // Malformed SSE line — skip
+        }
+      }
+    }
+  }
+
+  if (!full.trim()) {
+    throw new Error('Respons Gemini tidak valid (kosong).');
+  }
+  return full;
 }

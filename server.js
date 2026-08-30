@@ -19,10 +19,12 @@ const PORT = process.env.PORT || 4002;
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 
-// POST /api/gemini — call Gemini SDK server-side.
+// POST /api/gemini — call Gemini SDK server-side, streamed as SSE.
 // Uses GEMINI_API_KEY from .env by default; if the client sends its own
 // key (overrideApiKey), that takes priority. Keeps the default key
 // server-side (never exposed to the browser / GitHub).
+// Response shape: `data: {"content": "<delta>"}\n\n` for each chunk,
+// then a final `data: [DONE]\n\n`.
 app.post('/api/gemini', async (req, res) => {
   const { model, system, prompt, overrideApiKey } = req.body || {};
   const logTag = '[forensa /api/gemini]';
@@ -41,7 +43,16 @@ app.post('/api/gemini', async (req, res) => {
   try {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
+
+    // SSE headers — flush per chunk so Cloudflare/nginx never see an idle connection
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no', // disable nginx buffering → flush per chunk
+    });
+
+    const stream = await ai.models.generateContentStream({
       model,
       contents: [{ parts: [{ text: prompt }] }],
       config: {
@@ -49,12 +60,25 @@ app.post('/api/gemini', async (req, res) => {
         temperature: 0.7,
       },
     });
-    const text = response?.text || '';
-    console.log(`${logTag} done in ${((Date.now() - startedAt) / 1000).toFixed(1)}s (${text.length} chars)`);
-    return res.json({ text });
+
+    let totalChars = 0;
+    for await (const chunk of stream) {
+      const delta = chunk?.text || '';
+      if (delta.length > 0) {
+        totalChars += delta.length;
+        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+      }
+    }
+
+    res.write(`data: [DONE]\n\n`);
+    res.end();
+    console.log(`${logTag} done in ${((Date.now() - startedAt) / 1000).toFixed(1)}s (${totalChars} chars)`);
   } catch (e) {
     console.log(`${logTag} ERROR: ${e.message}`);
-    return res.status(502).json({ error: `Gagal memanggil Gemini: ${e.message}` });
+    if (!res.headersSent) {
+      return res.status(502).json({ error: `Gagal memanggil Gemini: ${e.message}` });
+    }
+    try { res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`); res.end(); } catch { /* client gone */ }
   }
 });
 
