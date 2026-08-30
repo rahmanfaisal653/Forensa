@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { AISettings, fetchModels, fetchServerGeminiKey } from '../services/aiClient';
-import { X, Loader2, RefreshCw, KeyRound, Server, Cpu, CheckCircle2, Eye, EyeOff, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { AISettings, fetchModels } from '../services/aiClient';
+import { X, Loader2, RefreshCw, KeyRound, Server, Cpu, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 interface Props {
   settings: AISettings;
@@ -12,25 +12,11 @@ export default function AISettingsModal({ settings, onSave, onClose }: Props) {
   const [serverUrl, setServerUrl] = useState(settings.serverUrl);
   const [apiKey, setApiKey] = useState(settings.apiKey);
   const [model, setModel] = useState(settings.model);
-  const [geminiApiKey, setGeminiApiKey] = useState(settings.geminiApiKey);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelError, setModelError] = useState('');
   const [showKey, setShowKey] = useState(false);
-  const [showGeminiKey, setShowGeminiKey] = useState(true);
   const [saved, setSaved] = useState(false);
-
-  // Load the server-default Gemini key (.env) and prefill the field if the
-  // user hasn't set their own yet — so the form shows it's ready to use.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (geminiApiKey.trim()) return; // user already has their own key
-      const serverKey = await fetchServerGeminiKey();
-      if (!cancelled && serverKey) setGeminiApiKey(serverKey);
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   const handleFetchModels = async () => {
     if (!serverUrl.trim() || !apiKey.trim()) {
@@ -60,7 +46,6 @@ export default function AISettingsModal({ settings, onSave, onClose }: Props) {
       serverUrl: serverUrl.trim(),
       apiKey: apiKey.trim(),
       model: serverUrl.trim() && apiKey.trim() ? model.trim() : '',
-      geminiApiKey: geminiApiKey.trim(),
     });
     setSaved(true);
     setTimeout(onClose, 800);
@@ -81,43 +66,6 @@ export default function AISettingsModal({ settings, onSave, onClose }: Props) {
         </div>
 
         <div className="px-6 py-5 space-y-5">
-          {/* Gemini API Key (default built-in) */}
-          <div>
-            <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              API Key Gemini
-            </label>
-            <div className="relative">
-              <input
-                type={showGeminiKey ? 'text' : 'password'}
-                value={geminiApiKey}
-                onChange={(e) => setGeminiApiKey(e.target.value)}
-                placeholder="Gemini API key"
-                className="w-full px-4 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => setShowGeminiKey(!showGeminiKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                title={showGeminiKey ? 'Sembunyikan' : 'Lihat'}
-              >
-                {showGeminiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            <div className="mt-1.5">
-              <p className="text-xs text-slate-400">
-                Kosongkan untuk memakai key default server. Isi jika ingin memakai key Gemini sendiri.
-              </p>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-slate-100 pt-4">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
-              Provider Lain (Opsional — isi jika tidak memakai Gemini)
-            </p>
-          </div>
-
           {/* Server URL */}
           <div>
             <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">

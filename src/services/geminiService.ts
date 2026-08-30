@@ -29,10 +29,9 @@ export async function generateAnalysis(
     return generateChat(settings, SYSTEM_INSTRUCTION, prompt);
   }
 
-  // Default: Gemini via the official SDK. Priority:
-  // 1. geminiApiKey dari settings (default built-in, bisa diganti user)
-  // 2. process.env.GEMINI_API_KEY (fallback terakhir)
-  return generateWithGemini(mode, journalName, manuscript, settings.geminiApiKey);
+  // Default: Gemini via the official SDK.
+  // Key dipegang SERVER (.env) — dipakai lewat proxy /api/gemini.
+  return generateWithGemini(mode, journalName, manuscript);
 }
 
 function buildPrompt(
@@ -74,28 +73,12 @@ Berikan output dengan struktur berikut:
 async function generateWithGemini(
   mode: 'forensics' | 'matchmaker',
   journalName: string,
-  manuscript: string,
-  apiKey: string
+  manuscript: string
 ): Promise<string> {
   const MODEL_NAME = 'gemini-3.6-flash';
   const prompt = buildPrompt(mode, journalName, manuscript);
 
-  // Jika user mengisi key Gemini sendiri → panggil langsung dari browser.
-  if (apiKey) {
-    const { GoogleGenAI } = await import('@google/genai');
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: [{ parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.7,
-      },
-    });
-    return response.text || 'Tidak ada respons dari sistem.';
-  }
-
-  // Jika kosong → pakai key default server (.env) via proxy /api/gemini.
+  // Pakai key default server (.env) via proxy /api/gemini.
   const res = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

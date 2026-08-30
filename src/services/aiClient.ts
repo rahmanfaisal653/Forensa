@@ -10,17 +10,12 @@ export interface AISettings {
   serverUrl: string;
   apiKey: string;
   model: string;
-  /** Gemini API key — default built-in (out-of-the-box), bisa diganti user. */
-  geminiApiKey: string;
 }
 
 export const DEFAULT_SETTINGS: AISettings = {
   serverUrl: '',
   apiKey: '',
   model: '',
-  // Default Gemini key dipegang SERVER (.env) — bukan di frontend.
-  // Kosong berarti app pakai key server via /api/gemini.
-  geminiApiKey: '',
 };
 
 const STORAGE_KEY = 'forensa_ai_settings';
@@ -34,7 +29,6 @@ export function loadSettings(): AISettings {
       serverUrl: parsed.serverUrl || '',
       apiKey: parsed.apiKey || '',
       model: parsed.model || '',
-      geminiApiKey: parsed.geminiApiKey || DEFAULT_SETTINGS.geminiApiKey,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
@@ -51,18 +45,6 @@ export function hasCustomSettings(s: AISettings): boolean {
 
 export interface ModelInfo {
   id: string;
-}
-
-/** Fetch the server-default Gemini key (from .env) so the settings UI can show it. */
-export async function fetchServerGeminiKey(): Promise<string> {
-  try {
-    const res = await fetch('/api/gemini-key');
-    if (!res.ok) return '';
-    const data = await res.json();
-    return typeof data?.key === 'string' ? data.key : '';
-  } catch {
-    return '';
-  }
 }
 
 /** Ask our backend proxy to list models from the user's provider. */
