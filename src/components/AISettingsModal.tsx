@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { AISettings, fetchModels } from '../services/aiClient';
+import React, { useState, useEffect } from 'react';
+import { AISettings, fetchModels, fetchServerGeminiKey } from '../services/aiClient';
 import { X, Loader2, RefreshCw, KeyRound, Server, Cpu, CheckCircle2, Eye, EyeOff, Sparkles } from 'lucide-react';
 
 interface Props {
@@ -21,6 +21,18 @@ export default function AISettingsModal({ settings, onSave, onClose }: Props) {
   const [showKey, setShowKey] = useState(false);
   const [showGeminiKey, setShowGeminiKey] = useState(true);
   const [saved, setSaved] = useState(false);
+
+  // Load the server-default Gemini key (.env) and prefill the field if the
+  // user hasn't set their own yet — so the form shows it's ready to use.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (geminiApiKey.trim()) return; // user already has their own key
+      const serverKey = await fetchServerGeminiKey();
+      if (!cancelled && serverKey) setGeminiApiKey(serverKey);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleFetchModels = async () => {
     if (!serverUrl.trim() || !apiKey.trim()) {
