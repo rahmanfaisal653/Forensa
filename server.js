@@ -74,11 +74,12 @@ app.post('/api/gemini', async (req, res) => {
     res.end();
     console.log(`${logTag} done in ${((Date.now() - startedAt) / 1000).toFixed(1)}s (${totalChars} chars)`);
   } catch (e) {
+    const msg = (e?.message || String(e)).replace(/^\{.*\}$/s, '');
     console.log(`${logTag} ERROR: ${e.message}`);
     if (!res.headersSent) {
       return res.status(502).json({ error: `Gagal memanggil Gemini: ${e.message}` });
     }
-    try { res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`); res.end(); } catch { /* client gone */ }
+    try { res.write(`data: ${JSON.stringify({ error: msg })}\n\n`); res.end(); } catch { /* client gone */ }
   }
 });
 
