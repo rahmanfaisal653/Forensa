@@ -77,7 +77,7 @@ async function generateWithGemini(
   manuscript: string,
   apiKey: string
 ): Promise<string> {
-  const MODEL_NAME = 'gemini-3.1-pro-preview';
+  const MODEL_NAME = 'gemini-3.6-flash';
   const prompt = buildPrompt(mode, journalName, manuscript);
 
   // Jika user mengisi key Gemini sendiri → panggil langsung dari browser.
