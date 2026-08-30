@@ -77,21 +77,38 @@ async function generateWithGemini(
   manuscript: string,
   apiKey: string
 ): Promise<string> {
-  const { GoogleGenAI } = await import('@google/genai');
   const MODEL_NAME = 'gemini-3.1-pro-preview';
-  const key = apiKey || ((process.env.GEMINI_API_KEY as string) || '');
-  const ai = new GoogleGenAI({ apiKey: key });
-
   const prompt = buildPrompt(mode, journalName, manuscript);
 
-  const response = await ai.models.generateContent({
-    model: MODEL_NAME,
-    contents: prompt,
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      temperature: 0.7,
-    },
-  });
+  // Jika user mengisi key Gemini sendiri → panggil langsung dari browser.
+  if (apiKey) {
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        temperature: 0.7,
+      },
+    });
+    return response.text || 'Tidak ada respons dari sistem.';
+  }
 
-  return response.text || 'Tidak ada respons dari sistem.';
+  // Jika kosong → pakai key default server (.env) via proxy /api/gemini.
+  const res = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: MODEL_NAME,
+      system: SYSTEM_INSTRUCTION,
+      prompt,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Gagal menghubungi Gemini (${res.status})${text ? ': ' + text : ''}`);
+  }
+  const data = await res.json();
+  return data?.text || 'Tidak ada respons dari sistem.';
 }

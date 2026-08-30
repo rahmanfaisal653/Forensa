@@ -18,7 +18,9 @@ export const DEFAULT_SETTINGS: AISettings = {
   serverUrl: '',
   apiKey: '',
   model: '',
-  geminiApiKey: 'AQ.Ab8RN6KvkJz_aWBUgX4h7OOKSyUCKRurMdeFSNXjxpgp7sNKHw',
+  // Default Gemini key dipegang SERVER (.env) — bukan di frontend.
+  // Kosong berarti app pakai key server via /api/gemini.
+  geminiApiKey: '',
 };
 
 const STORAGE_KEY = 'forensa_ai_settings';
