@@ -13,9 +13,7 @@ export default function AISettingsModal({ settings, onSave, onClose }: Props) {
   const [apiKey, setApiKey] = useState(settings.apiKey);
   const [model, setModel] = useState(settings.model);
   const [geminiApiKey, setGeminiApiKey] = useState(settings.geminiApiKey);
-  const [availableModels, setAvailableModels] = useState<string[]>(
-    settings.model ? [settings.model] : []
-  );
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelError, setModelError] = useState('');
   const [showKey, setShowKey] = useState(false);
@@ -61,7 +59,7 @@ export default function AISettingsModal({ settings, onSave, onClose }: Props) {
     onSave({
       serverUrl: serverUrl.trim(),
       apiKey: apiKey.trim(),
-      model: model.trim(),
+      model: serverUrl.trim() && apiKey.trim() ? model.trim() : '',
       geminiApiKey: geminiApiKey.trim(),
     });
     setSaved(true);
@@ -191,9 +189,6 @@ export default function AISettingsModal({ settings, onSave, onClose }: Props) {
               onChange={(e) => setModel(e.target.value)}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none"
             >
-              {!availableModels.includes(model) && model && (
-                <option value={model}>{model}</option>
-              )}
               {availableModels.length === 0 && (
                 <option value="">Klik "Muat Model" untuk memuat daftar</option>
               )}
