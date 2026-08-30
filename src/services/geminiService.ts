@@ -29,8 +29,10 @@ export async function generateAnalysis(
     return generateChat(settings, SYSTEM_INSTRUCTION, prompt);
   }
 
-  // Default: Gemini via the official SDK (as before).
-  return generateWithGemini(mode, journalName, manuscript);
+  // Default: Gemini via the official SDK. Priority:
+  // 1. geminiApiKey dari settings (default built-in, bisa diganti user)
+  // 2. process.env.GEMINI_API_KEY (fallback terakhir)
+  return generateWithGemini(mode, journalName, manuscript, settings.geminiApiKey);
 }
 
 function buildPrompt(
@@ -72,11 +74,13 @@ Berikan output dengan struktur berikut:
 async function generateWithGemini(
   mode: 'forensics' | 'matchmaker',
   journalName: string,
-  manuscript: string
+  manuscript: string,
+  apiKey: string
 ): Promise<string> {
   const { GoogleGenAI } = await import('@google/genai');
   const MODEL_NAME = 'gemini-3.1-pro-preview';
-  const ai = new GoogleGenAI({ apiKey: (process.env.GEMINI_API_KEY as string) || '' });
+  const key = apiKey || ((process.env.GEMINI_API_KEY as string) || '');
+  const ai = new GoogleGenAI({ apiKey: key });
 
   const prompt = buildPrompt(mode, journalName, manuscript);
 

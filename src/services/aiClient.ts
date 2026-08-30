@@ -10,12 +10,15 @@ export interface AISettings {
   serverUrl: string;
   apiKey: string;
   model: string;
+  /** Gemini API key — default built-in (out-of-the-box), bisa diganti user. */
+  geminiApiKey: string;
 }
 
 export const DEFAULT_SETTINGS: AISettings = {
   serverUrl: '',
   apiKey: '',
   model: '',
+  geminiApiKey: 'AQ.Ab8RN6KvkJz_aWBUgX4h7OOKSyUCKRurMdeFSNXjxpgp7sNKHw',
 };
 
 const STORAGE_KEY = 'forensa_ai_settings';
@@ -29,6 +32,7 @@ export function loadSettings(): AISettings {
       serverUrl: parsed.serverUrl || '',
       apiKey: parsed.apiKey || '',
       model: parsed.model || '',
+      geminiApiKey: parsed.geminiApiKey || DEFAULT_SETTINGS.geminiApiKey,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
